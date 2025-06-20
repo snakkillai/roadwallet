@@ -26,8 +26,11 @@ let isInstalled = false;
 const loadingOverlay = document.getElementById('loading-overlay');
 const totalExpensesAmount = document.getElementById('total-expenses-amount');
 const openModalButton = document.getElementById('open-modal-button');
+const settlementButton = document.getElementById('settlement-button');
 const travelersModal = document.getElementById('travelers-modal');
+const settlementModal = document.getElementById('settlement-modal');
 const closeButton = document.querySelector('.close-button');
+const settlementCloseButton = document.querySelector('.settlement-close');
 const travelersForm = document.getElementById('travelers-form');
 const travelerNameInput = document.getElementById('traveler-name');
 const travelersList = document.getElementById('travelers-list');
@@ -37,7 +40,7 @@ const expenseCategorySelect = document.getElementById('expense-category');
 const expenseAmountInput = document.getElementById('expense-amount');
 const paidBySelect = document.getElementById('paid-by');
 const expenseList = document.getElementById('expense-list');
-const settlementSummary = document.getElementById('settlement-summary');
+const settlementContent = document.getElementById('settlement-content');
 
 // Initialize the app when the page loads
 document.addEventListener('DOMContentLoaded', () => {
@@ -187,9 +190,122 @@ function handleShortcuts() {
     } else if (action === 'manage-travelers') {
         // Open travelers modal
         setTimeout(() => {
-            openModal();
+            openTravelersModal();
         }, 500);
     }
+}
+
+// ===== MODAL FUNCTIONS =====
+
+// Travelers Modal Functions
+function openTravelersModal() {
+    travelersModal.style.display = 'block';
+    travelerNameInput.focus();
+}
+
+function closeTravelersModal() {
+    travelersModal.style.display = 'none';
+    travelersForm.reset();
+}
+
+// Settlement Modal Functions
+function openSettlementModal() {
+    updateSettlementModalContent();
+    settlementModal.style.display = 'block';
+}
+
+function closeSettlementModal() {
+    settlementModal.style.display = 'none';
+}
+
+function updateSettlementModalContent() {
+    const travelerIds = Object.keys(travelers);
+    
+    if (travelerIds.length === 0) {
+        settlementContent.innerHTML = `
+            <div class="settlement-no-travelers">
+                <i class="fas fa-users" style="font-size: 2em; margin-bottom: 10px; display: block; color: #a0aec0;"></i>
+                <p>Add travelers to see settlement suggestions</p>
+                <button onclick="closeSettlementModal(); openTravelersModal();" style="margin-top: 10px; background: linear-gradient(135deg, #e53e3e, #c53030);">
+                    <i class="fas fa-users"></i> Add Travelers
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    const settlements = calculateSettlements();
+    
+    if (settlements.length === 0) {
+        settlementContent.innerHTML = `
+            <div class="settlement-all-even">
+                <i class="fas fa-check-circle"></i>
+                <div style="margin-top: 8px;">All settled up!</div>
+                <div style="font-size: 0.9em; margin-top: 4px; opacity: 0.8;">Everyone is even. No payments needed!</div>
+            </div>
+        `;
+        return;
+    }
+    
+    // Show individual balances first
+    let balanceHTML = '<div style="margin-bottom: 15px;"><h3 style="font-size: 0.9em; color: #4a5568; margin-bottom: 8px;">Individual Balances:</h3>';
+    
+    travelerIds.forEach(travelerId => {
+        const traveler = travelers[travelerId];
+        const balance = balances[travelerId] || 0;
+        
+        let balanceClass = 'even';
+        let balanceText = 'Even';
+        let balanceIcon = 'fas fa-check-circle';
+        
+        if (balance > 0.01) {
+            balanceClass = 'owed';
+            balanceText = `Owed $${balance.toFixed(2)}`;
+            balanceIcon = 'fas fa-arrow-down';
+        } else if (balance < -0.01) {
+            balanceClass = 'owes';
+            balanceText = `Owes $${Math.abs(balance).toFixed(2)}`;
+            balanceIcon = 'fas fa-arrow-up';
+        }
+        
+        balanceHTML += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; margin-bottom: 4px; background: rgba(255,255,255,0.5); border-radius: 6px;">
+                <span style="font-weight: 500;">${traveler.name}</span>
+                <span class="traveler-balance ${balanceClass}" style="display: flex; align-items: center; gap: 4px;">
+                    <i class="${balanceIcon}" style="font-size: 0.7em;"></i>
+                    ${balanceText}
+                </span>
+            </div>
+        `;
+    });
+    balanceHTML += '</div>';
+    
+    // Show settlement plan
+    let settlementHTML = '<h3 style="font-size: 0.9em; color: #4a5568; margin-bottom: 8px;">Settlement Plan:</h3>';
+    
+    settlementHTML += settlements.map(settlement => {
+        const fromName = travelers[settlement.from]?.name || 'Unknown';
+        const toName = travelers[settlement.to]?.name || 'Unknown';
+        
+        return `
+            <div class="settlement-item">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="settlement-from">${fromName}</span>
+                        <span class="settlement-arrow">→</span>
+                        <span class="settlement-to">${toName}</span>
+                    </div>
+                    <span class="settlement-amount">$${settlement.amount.toFixed(2)}</span>
+                </div>
+                <div class="settlement-description">
+                    <i class="fas fa-info-circle" style="margin-right: 4px;"></i>
+                    ${fromName} pays ${toName} $${settlement.amount.toFixed(2)}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    settlementContent.innerHTML = balanceHTML + settlementHTML;
 }
 
 // ===== EXISTING ROADWALLET FUNCTIONALITY =====
@@ -215,24 +331,13 @@ function showMessage(text, type = 'success') {
     message.textContent = text;
     
     const container = document.querySelector('.container');
-    container.insertBefore(message, container.children[1]);
+    container.insertBefore(message, container.children[2]);
     
     setTimeout(() => {
         if (message.parentNode) {
             message.remove();
         }
     }, 3000);
-}
-
-// Modal Functions
-function openModal() {
-    travelersModal.style.display = 'block';
-    travelerNameInput.focus();
-}
-
-function closeModal() {
-    travelersModal.style.display = 'none';
-    travelersForm.reset();
 }
 
 // Initialize App
@@ -495,7 +600,6 @@ function calculateBalances() {
     
     if (totalTravelers === 0) {
         balances = {};
-        updateSettlementUI();
         return;
     }
     
@@ -527,8 +631,6 @@ function calculateBalances() {
     travelerIds.forEach(travelerId => {
         balances[travelerId] = paidAmounts[travelerId] - perPersonShare;
     });
-    
-    updateSettlementUI();
 }
 
 // Calculate optimal settlements to minimize transactions
@@ -585,55 +687,31 @@ function calculateSettlements() {
     return settlements;
 }
 
-// Update Settlement UI
-function updateSettlementUI() {
-    const travelerIds = Object.keys(travelers);
-    
-    if (travelerIds.length === 0) {
-        settlementSummary.innerHTML = '<div class="settlement-no-travelers">Add travelers to see settlement suggestions</div>';
-        return;
-    }
-    
-    const settlements = calculateSettlements();
-    
-    if (settlements.length === 0) {
-        settlementSummary.innerHTML = '<div class="settlement-all-even"><i class="fas fa-check-circle"></i> All settled up! Everyone is even.</div>';
-        return;
-    }
-    
-    settlementSummary.innerHTML = settlements.map(settlement => {
-        const fromName = travelers[settlement.from]?.name || 'Unknown';
-        const toName = travelers[settlement.to]?.name || 'Unknown';
-        
-        return `
-            <div class="settlement-item">
-                <span class="settlement-from">${fromName}</span>
-                <span class="settlement-arrow">→</span>
-                <span class="settlement-to">${toName}</span>
-                <span class="settlement-amount">$${settlement.amount.toFixed(2)}</span>
-                <div style="clear: both; margin-top: 8px; font-size: 0.85em; color: #718096;">
-                    ${fromName} pays ${toName} $${settlement.amount.toFixed(2)}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
 // Event Listeners
-openModalButton.addEventListener('click', openModal);
-closeButton.addEventListener('click', closeModal);
+openModalButton.addEventListener('click', openTravelersModal);
+settlementButton.addEventListener('click', openSettlementModal);
+closeButton.addEventListener('click', closeTravelersModal);
+settlementCloseButton.addEventListener('click', closeSettlementModal);
 
-// Close modal when clicking outside
+// Close modals when clicking outside
 window.addEventListener('click', (event) => {
     if (event.target === travelersModal) {
-        closeModal();
+        closeTravelersModal();
+    }
+    if (event.target === settlementModal) {
+        closeSettlementModal();
     }
 });
 
-// Close modal with Escape key
+// Close modals with Escape key
 document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && travelersModal.style.display === 'block') {
-        closeModal();
+    if (event.key === 'Escape') {
+        if (travelersModal.style.display === 'block') {
+            closeTravelersModal();
+        }
+        if (settlementModal.style.display === 'block') {
+            closeSettlementModal();
+        }
     }
 });
 

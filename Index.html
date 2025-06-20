@@ -59,7 +59,12 @@
 <body>
     <div class="container">
         <h1><i class="fas fa-route"></i> Road Wallet</h1>
-        <button id="open-modal-button"><i class="fas fa-users"></i> Manage Travelers</button>
+        
+        <!-- Action Buttons Row -->
+        <div class="action-buttons">
+            <button id="open-modal-button"><i class="fas fa-users"></i> Manage Travelers</button>
+            <button id="settlement-button"><i class="fas fa-balance-scale"></i> Settlement Plan</button>
+        </div>
         
         <!-- Header row with total -->
         <div class="header-row">
@@ -83,8 +88,20 @@
             </div>
         </div>
         
+        <!-- Modal for Settlement Plan -->
+        <div id="settlement-modal" class="modal">
+            <div class="modal-content settlement-modal-content">
+                <span class="close-button settlement-close">&times;</span>
+                <h2><i class="fas fa-balance-scale"></i> Settlement Plan</h2>
+                <div id="settlement-content">
+                    <!-- Settlement details will be displayed here -->
+                </div>
+            </div>
+        </div>
+        
         <div class="main-content">
-            <div class="left-column">
+            <!-- Single column layout for mobile-friendly design -->
+            <div class="content-column">
                 <!-- Add Expense Form -->
                 <div class="expense-form-section">
                     <h2>Add Expense</h2>
@@ -129,14 +146,6 @@
                 <div class="expense-history-section">
                     <h2>Expense History</h2>
                     <ul id="expense-list"></ul>
-                </div>
-            </div>
-            
-            <div class="right-column">
-                <!-- Settlement Summary -->
-                <div class="settlement-section">
-                    <h2>💰 Settlement Plan</h2>
-                    <div id="settlement-summary"></div>
                 </div>
             </div>
         </div>
